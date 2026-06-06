@@ -215,7 +215,8 @@ class MathPlotter(Star):
             start_str, end_str = "0,0", s
         start = MathPlotter._parse_point(start_str)
         end = MathPlotter._parse_point(end_str)
-        return {"start": start, "end": end, "color": color, "label": label}
+        return {"start": start, "end": end, "color": color,
+                "label": MathPlotter._sanitize_math_text(label)}
 
     @staticmethod
     def _parse_vector_def_3d(def_str: str):
@@ -251,7 +252,8 @@ class MathPlotter(Star):
             start_str, end_str = "0,0,0", s
         start = MathPlotter._parse_point_3d(start_str)
         end = MathPlotter._parse_point_3d(end_str)
-        return {"start": start, "end": end, "color": color, "label": label}
+        return {"start": start, "end": end, "color": color,
+                "label": MathPlotter._sanitize_math_text(label)}
 
     def _draw_2d_arrow(self, ax, start, end, color: str, lw: float,
                         label: str = "", label_offset=(0, 0)):
