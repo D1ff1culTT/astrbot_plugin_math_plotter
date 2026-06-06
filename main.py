@@ -1381,10 +1381,10 @@ class MathPlotter(Star):
 
             # v1（蓝）
             self._draw_2d_arrow(ax, (0, 0), (v1x, v1y), "#2196F3", lw,
-                                f"v₁=({v1x},{v1y})", (0.12, -0.12))
+                                f"$v_1=({v1x},{v1y})$", (0.12, -0.12))
             # v2（红）
             self._draw_2d_arrow(ax, (0, 0), (v2x, v2y), "#F44336", lw,
-                                f"v₂=({v2x},{v2y})", (0.12, -0.12))
+                                f"$v_2=({v2x},{v2y})$", (0.12, -0.12))
             # 平行四边形辅助线（虚线）：从 v1 终点平移 v2，从 v2 终点平移 v1
             ax.plot([v1x, rx], [v1y, ry], linestyle="--", linewidth=1.2,
                     color="#9E9E9E", zorder=2)
@@ -1392,12 +1392,12 @@ class MathPlotter(Star):
                     color="#9E9E9E", zorder=2)
             # 结果向量 v1+v2（绿）
             self._draw_2d_arrow(ax, (0, 0), (rx, ry), "#4CAF50", lw + 1,
-                                f"v₁+v₂=({rx},{ry})", (0.15, -0.15))
+                                f"$v_1+v_2=({rx},{ry})$", (0.15, -0.15))
 
             self._style_axes(ax)
             if xlabel: ax.set_xlabel(xlabel)
             if ylabel: ax.set_ylabel(ylabel)
-            ax.set_title(title or f"向量加法: v₁+v₂ = ({rx},{ry})", fontsize=14)
+            ax.set_title(title or f"向量加法: $v_1+v_2 = ({rx},{ry})$", fontsize=14)
             all_vals = [0, v1x, v2x, rx, v1y, v2y, ry]
             rng = max(abs(v) for v in all_vals) * 1.3 + 1
             ax.set_xlim(-rng * 0.05, rng)
@@ -1405,7 +1405,7 @@ class MathPlotter(Star):
             ax.set_aspect("equal")
 
             filepath = self._save_and_close(fig)
-            description = f"📐 已绘制向量加法演示：v₁=({v1x},{v1y}) + v₂=({v2x},{v2y}) = ({rx},{ry})。"
+            description = f"📐 已绘制向量加法演示：v1=({v1x},{v1y}) + v2=({v2x},{v2y}) = ({rx},{ry})。"
             await self._send_result(event, description, filepath)
             return description
         except ValueError as e:
@@ -1479,11 +1479,11 @@ class MathPlotter(Star):
         new_basis: str, title: str = "",
         xlabel: str = "", ylabel: str = "",
     ) -> MessageEventResult:
-        """演示基变换：在同一坐标系中显示标准基向量 e₁,e₂ 和一组新基向量。
+        """演示基变换：在同一坐标系中显示标准基向量 e1, e2 和一组新基向量。
 
         Args:
             new_basis(string): 新基向量，格式 "(b1x,b1y),(b2x,b2y)"。
-                例："(1,1),(1,-1)" 表示新基 b₁=(1,1), b₂=(1,-1)
+                例："(1,1),(1,-1)" 表示新基 b1=(1,1), b2=(1,-1)
             title(string): 图表标题
             xlabel(string): x 轴标签
             ylabel(string): y 轴标签
@@ -1503,19 +1503,19 @@ class MathPlotter(Star):
 
             # 标准基 e1, e2（灰色）
             self._draw_2d_arrow(ax, (0, 0), (1, 0), "#9E9E9E", lw,
-                                "e₁=(1,0)", (-0.1, -0.25))
+                                "$e_1=(1,0)$", (-0.1, -0.25))
             self._draw_2d_arrow(ax, (0, 0), (0, 1), "#9E9E9E", lw,
-                                "e₂=(0,1)", (-0.35, -0.05))
+                                "$e_2=(0,1)$", (-0.35, -0.05))
             # 新基 b1（红）, b2（蓝）
             self._draw_2d_arrow(ax, (0, 0), b1, "#F44336", lw + 1,
-                                f"b₁=({b1[0]},{b1[1]})", (0.12, -0.15))
+                                f"$b_1=({b1[0]},{b1[1]})$", (0.12, -0.15))
             self._draw_2d_arrow(ax, (0, 0), b2, "#2196F3", lw + 1,
-                                f"b₂=({b2[0]},{b2[1]})", (0.12, -0.15))
+                                f"$b_2=({b2[0]},{b2[1]})$", (0.12, -0.15))
 
             self._style_axes(ax)
             if xlabel: ax.set_xlabel(xlabel)
             if ylabel: ax.set_ylabel(ylabel)
-            ax.set_title(title or f"基变换: 标准基 → b₁=({b1[0]},{b1[1]}), b₂=({b2[0]},{b2[1]})", fontsize=14)
+            ax.set_title(title or f"基变换: 标准基 → $b_1=({b1[0]},{b1[1]})$, $b_2=({b2[0]},{b2[1]})$", fontsize=14)
             all_vals = [0, 1, b1[0], b2[0], b1[1], b2[1]]
             rng = max(abs(v) for v in all_vals) * 1.3 + 1
             ax.set_xlim(-rng * 0.05, rng)
@@ -1523,8 +1523,8 @@ class MathPlotter(Star):
             ax.set_aspect("equal")
 
             filepath = self._save_and_close(fig)
-            description = (f"📐 已绘制基变换演示：标准基 e₁=(1,0), e₂=(0,1) "
-                           f"→ 新基 b₁=({b1[0]},{b1[1]}), b₂=({b2[0]},{b2[1]})。")
+            description = (f"📐 已绘制基变换演示：标准基 e1=(1,0), e2=(0,1) "
+                           f"→ 新基 b1=({b1[0]},{b1[1]}), b2=({b2[0]},{b2[1]})。")
             await self._send_result(event, description, filepath)
             return description
         except ValueError as e:
