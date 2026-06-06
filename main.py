@@ -18,6 +18,7 @@ plt.rcParams["font.sans-serif"] = [
     "WenQuanYi Micro Hei", "DejaVu Sans",
 ]
 plt.rcParams["axes.unicode_minus"] = False
+plt.rcParams["mathtext.fontset"] = "dejavusans"  # 确保数学下标（$v_1$）正常渲染
 
 import numpy as np
 from sympy import sympify, lambdify, symbols, latex, SympifyError
@@ -271,7 +272,7 @@ class MathPlotter(Star):
             ly = end[1] + default_off_y + label_offset[1]
             ax.annotate(
                 label, xy=end, xytext=(lx, ly),
-                fontsize=10, color=color, fontweight="bold",
+                fontsize=11, color=color,
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7),
                 zorder=5,
             )
@@ -1381,10 +1382,10 @@ class MathPlotter(Star):
 
             # v1（蓝）
             self._draw_2d_arrow(ax, (0, 0), (v1x, v1y), "#2196F3", lw,
-                                f"$v_1=({v1x},{v1y})$", (0.12, -0.12))
+                                f"$\\mathbf{{v_1}}=({v1x},{v1y})$", (0.12, -0.12))
             # v2（红）
             self._draw_2d_arrow(ax, (0, 0), (v2x, v2y), "#F44336", lw,
-                                f"$v_2=({v2x},{v2y})$", (0.12, -0.12))
+                                f"$\\mathbf{{v_2}}=({v2x},{v2y})$", (0.12, -0.12))
             # 平行四边形辅助线（虚线）：从 v1 终点平移 v2，从 v2 终点平移 v1
             ax.plot([v1x, rx], [v1y, ry], linestyle="--", linewidth=1.2,
                     color="#9E9E9E", zorder=2)
@@ -1392,16 +1393,18 @@ class MathPlotter(Star):
                     color="#9E9E9E", zorder=2)
             # 结果向量 v1+v2（绿）
             self._draw_2d_arrow(ax, (0, 0), (rx, ry), "#4CAF50", lw + 1,
-                                f"$v_1+v_2=({rx},{ry})$", (0.15, -0.15))
+                                f"$\\mathbf{{v_1+v_2}}=({rx},{ry})$", (0.15, -0.15))
 
             self._style_axes(ax)
             if xlabel: ax.set_xlabel(xlabel)
             if ylabel: ax.set_ylabel(ylabel)
-            ax.set_title(title or f"向量加法: $v_1+v_2 = ({rx},{ry})$", fontsize=14)
-            all_vals = [0, v1x, v2x, rx, v1y, v2y, ry]
-            rng = max(abs(v) for v in all_vals) * 1.3 + 1
-            ax.set_xlim(-rng * 0.05, rng)
-            ax.set_ylim(-rng * 0.05, rng)
+            ax.set_title(title or f"向量加法: $\\mathbf{{v_1}}+\\mathbf{{v_2}} = ({rx},{ry})$", fontsize=15)
+            all_x = [0, v1x, v2x, rx]
+            all_y = [0, v1y, v2y, ry]
+            x_margin = (max(all_x) - min(all_x)) * 0.2 + 1.5
+            y_margin = (max(all_y) - min(all_y)) * 0.2 + 1.5
+            ax.set_xlim(min(all_x) - x_margin, max(all_x) + x_margin)
+            ax.set_ylim(min(all_y) - y_margin, max(all_y) + y_margin)
             ax.set_aspect("equal")
 
             filepath = self._save_and_close(fig)
@@ -1452,11 +1455,13 @@ class MathPlotter(Star):
             self._style_axes(ax)
             if xlabel: ax.set_xlabel(xlabel)
             if ylabel: ax.set_ylabel(ylabel)
-            ax.set_title(title or f"向量数乘: {k}·v = ({sx:.1f},{sy:.1f})", fontsize=14)
-            all_vals = [0, px, sx, py, sy]
-            rng = max(abs(v) for v in all_vals) * 1.3 + 1
-            ax.set_xlim(-rng * 0.05, rng)
-            ax.set_ylim(-rng * 0.05, rng)
+            ax.set_title(title or f"向量数乘: ${k}\\cdot v = ({sx:.1f},{sy:.1f})$", fontsize=15)
+            all_x = [0, px, sx]
+            all_y = [0, py, sy]
+            x_margin = (max(all_x) - min(all_x)) * 0.2 + 1.5
+            y_margin = (max(all_y) - min(all_y)) * 0.2 + 1.5
+            ax.set_xlim(min(all_x) - x_margin, max(all_x) + x_margin)
+            ax.set_ylim(min(all_y) - y_margin, max(all_y) + y_margin)
             ax.set_aspect("equal")
 
             filepath = self._save_and_close(fig)
@@ -1503,23 +1508,25 @@ class MathPlotter(Star):
 
             # 标准基 e1, e2（灰色）
             self._draw_2d_arrow(ax, (0, 0), (1, 0), "#9E9E9E", lw,
-                                "$e_1=(1,0)$", (-0.1, -0.25))
+                                "$\\mathbf{e_1}=(1,0)$", (-0.1, -0.25))
             self._draw_2d_arrow(ax, (0, 0), (0, 1), "#9E9E9E", lw,
-                                "$e_2=(0,1)$", (-0.35, -0.05))
+                                "$\\mathbf{e_2}=(0,1)$", (-0.35, -0.05))
             # 新基 b1（红）, b2（蓝）
             self._draw_2d_arrow(ax, (0, 0), b1, "#F44336", lw + 1,
-                                f"$b_1=({b1[0]},{b1[1]})$", (0.12, -0.15))
+                                f"$\\mathbf{{b_1}}=({b1[0]},{b1[1]})$", (0.12, -0.15))
             self._draw_2d_arrow(ax, (0, 0), b2, "#2196F3", lw + 1,
-                                f"$b_2=({b2[0]},{b2[1]})$", (0.12, -0.15))
+                                f"$\\mathbf{{b_2}}=({b2[0]},{b2[1]})$", (0.12, -0.15))
 
             self._style_axes(ax)
             if xlabel: ax.set_xlabel(xlabel)
             if ylabel: ax.set_ylabel(ylabel)
-            ax.set_title(title or f"基变换: 标准基 → $b_1=({b1[0]},{b1[1]})$, $b_2=({b2[0]},{b2[1]})$", fontsize=14)
-            all_vals = [0, 1, b1[0], b2[0], b1[1], b2[1]]
-            rng = max(abs(v) for v in all_vals) * 1.3 + 1
-            ax.set_xlim(-rng * 0.05, rng)
-            ax.set_ylim(-rng * 0.05, rng)
+            ax.set_title(title or f"基变换: 标准基 → $\\mathbf{{b_1}}=({b1[0]},{b1[1]})$, $\\mathbf{{b_2}}=({b2[0]},{b2[1]})$", fontsize=15)
+            all_x = [0, 1, b1[0], b2[0]]
+            all_y = [0, 1, b1[1], b2[1]]
+            x_margin = (max(all_x) - min(all_x)) * 0.2 + 1.5
+            y_margin = (max(all_y) - min(all_y)) * 0.2 + 1.5
+            ax.set_xlim(min(all_x) - x_margin, max(all_x) + x_margin)
+            ax.set_ylim(min(all_y) - y_margin, max(all_y) + y_margin)
             ax.set_aspect("equal")
 
             filepath = self._save_and_close(fig)
