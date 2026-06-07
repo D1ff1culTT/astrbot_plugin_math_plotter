@@ -23,7 +23,11 @@
    ```bash
    pip install -r requirements.txt
    ```
-3. 重启 AstrBot
+3. 3D 绘图需要 Chrome 浏览器（kaleido 渲染引擎依赖），请确保服务器已安装：
+   - **Linux**：`sudo apt install google-chrome-stable` 或运行 `plotly_get_chrome`
+   - **Windows**：从 https://www.google.com/chrome/ 下载安装
+   - 仅 2D 绘图不受影响，无需 Chrome
+4. 重启 AstrBot
 
 ## 支持的绘图模式
 
@@ -185,7 +189,7 @@ AI 可自动调用以下工具（通过 `@filter.llm_tool` 注册）：
 - numpy ≥ 1.24.0
 - sympy ≥ 1.11.0
 - plotly ≥ 6.0
-- kaleido ≥ 1.0 (plotly 静态图片导出)
+- kaleido ≥ 1.0 (plotly 静态图片导出，需 Chrome/Chromium，仅 3D 功能需要)
 
 ## 许可
 
