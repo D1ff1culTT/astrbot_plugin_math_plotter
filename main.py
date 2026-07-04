@@ -125,9 +125,16 @@ class MathPlotter(Star):
             return self._parse_range(default)
 
     # ── 公共发送逻辑 ──
-    async def _send_result(self, event: AstrMessageEvent, description: str, filepath: str):
-        """发送图文给用户：await event.send(MessageChain(...))"""
-        await event.send(MessageChain(
+    async def _send_result(self, event, description: str, filepath: str):
+        """发送图文给用户。兼容 AstrBot v4.26+ ContextWrapper 和旧版 AstrMessageEvent。"""
+        # 解包 ContextWrapper（v4.26+），提取真实的 AstrMessageEvent
+        real_event = getattr(event, "event", None) or event
+        if not hasattr(real_event, "send"):
+            # 更深层解包：某些版本中 event 封装在 context 里
+            ctx = getattr(event, "context", None)
+            if ctx and hasattr(ctx, "event"):
+                real_event = ctx.event
+        await real_event.send(MessageChain(
             chain=[Comp.Plain(description), Comp.Image.fromFileSystem(filepath)],
             type="tool_direct_result",
         ))
