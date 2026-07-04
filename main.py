@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import uuid
@@ -322,9 +323,8 @@ class MathPlotter(Star):
                 zorder=5,
             )
 
-    @staticmethod
-    def _render_3d_vectors(vector_list: list, title: str, dpi: int,
-                            xlabel: str = "x", ylabel: str = "y", zlabel: str = "z") -> str:
+    async def _render_3d_vectors(self, vector_list: list, title: str, dpi: int,
+                                   xlabel: str = "x", ylabel: str = "y", zlabel: str = "z") -> str:
         """用 plotly 渲染三维向量图。每个向量用线段 + 末端锥体箭头表示。
 
         Args:
@@ -377,7 +377,7 @@ class MathPlotter(Star):
         )
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        fig.write_image(filepath, scale=dpi / 100)
+        await asyncio.to_thread(lambda f=fig, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
         return filepath
 
     # ═══════════════════════════════════════════════════
@@ -571,9 +571,8 @@ class MathPlotter(Star):
     #  手动 3D 投影渲染（无需 Axes3D，避免 BboxTransformTo 错误）
     # ═══════════════════════════════════════════════════
 
-    @staticmethod
-    def _render_3d_surface(
-        X: np.ndarray, Y: np.ndarray, Z: np.ndarray,
+    async def _render_3d_surface(
+        self, X: np.ndarray, Y: np.ndarray, Z: np.ndarray,
         cmap_name: str = "viridis",
         elev: float = 25, azim: float = -60,
         dpi: int = 150,
@@ -622,7 +621,7 @@ class MathPlotter(Star):
 
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        fig_plotly.write_image(filepath, scale=dpi / 100)
+        await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
         return filepath
 
     @filter.llm_tool(name="plot_3d_function")
@@ -680,7 +679,7 @@ class MathPlotter(Star):
 
             # ── Plotly 真 3D 渲染 ──
             plot_title = title if title else f"$z = {latex_expr}$"
-            filepath = self._render_3d_surface(
+            filepath = await self._render_3d_surface(
                 X, Y, Z,
                 cmap_name=cmap,
                 elev=self._get_config("plot_3d_elev", 25),
@@ -912,7 +911,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            fig_plotly.write_image(filepath, scale=dpi / 100)
+            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
 
             description = (f"📈 已绘制球坐标曲面 $r = {latex(expr)}$ 的 3D 图像，"
                            f"θ 范围 [{tmin:.2f}, {tmax:.2f}]，φ 范围 [{pmin:.2f}, {pmax:.2f}]。")
@@ -1097,7 +1096,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            fig_plotly.write_image(filepath, scale=dpi / 100)
+            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
 
             desc = "📈 已绘制 3D 曲面对比：" + ", ".join(descriptions) + f"。x/y 范围 [{x_min}, {x_max}]。"
             await self._send_result(event, desc, filepath)
@@ -1195,7 +1194,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            fig_plotly.write_image(filepath, scale=dpi / 100)
+            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
 
             description = (f"📈 已绘制隐式曲面 ${latex(expr)} = 0$ 的 3D 图像，"
                            f"范围 x[{x_min},{x_max}] y[{y_min},{y_max}] z[{z_min},{z_max}]。")
@@ -1283,7 +1282,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            fig_plotly.write_image(filepath, scale=dpi / 100)
+            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
 
             description = (f"📈 已绘制三维参数曲线 $(x,y,z) = ({latex(expr_x)},\\, {latex(expr_y)},\\, {latex(expr_z)})$，"
                            f"t 范围 [{t_min:.2f}, {t_max:.2f}]。")
@@ -1389,7 +1388,7 @@ class MathPlotter(Star):
             dpi = self._get_config("plot_dpi", 120)
             plot_title = title or "三维向量图"
 
-            filepath = self._render_3d_vectors(
+            filepath = await self._render_3d_vectors(
                 parsed, plot_title, dpi,
                 xlabel=xlabel or "x", ylabel=ylabel or "y", zlabel=zlabel or "z",
             )
