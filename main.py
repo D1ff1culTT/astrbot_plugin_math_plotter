@@ -59,7 +59,7 @@ from sympy.abc import x as sym_x
 PLOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plots")
 
 
-@register("math_plotter", "YourName", "AI 数学公式函数图像绘制工具，辅导学习时自动调用", "1.1.1")
+@register("math_plotter", "YourName", "AI 数学公式函数图像绘制工具，辅导学习时自动调用", "1.2.0")
 class MathPlotter(Star):
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)

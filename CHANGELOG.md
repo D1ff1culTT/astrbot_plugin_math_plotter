@@ -6,6 +6,34 @@
 
 ---
 
+## [v1.2.0] - 2026-07-04
+
+### 移除
+
+- 完全移除 plotly / kaleido 依赖，所有 3D 渲染改用 matplotlib 原生引擎
+- Docker 容器无需 Chrome，即装即用
+
+### 变更
+
+- `_render_3d_surface` — plotly Surface → matplotlib `plot_surface`
+- `_render_3d_vectors` — plotly Cone + Scatter3d → matplotlib `quiver` + `scatter`
+- `plot_3d_parametric` — plotly Scatter3d → matplotlib `ax.plot(3d)`
+- `plot_3d_multiple` — 多 plotly Surface → 多 matplotlib `plot_surface`
+- `plot_implicit_3d` — plotly Isosurface → matplotlib `contour` 切片叠加
+
+### 修复
+
+- 修复 AstrBot v4.26 LLM 工具 `event` 变为 `ContextWrapper` 导致 `event.send()` 报错
+- 修复 `_get_config` 未接收 `__init__` 第二参数 `config`（AstrBotConfig dict），导致配置无法读取
+- 修复服务器无 CJK 字体时图中中文显示为方框字
+- 修复 `logger.error` 无堆栈跟踪，改为 `logger.exception`
+
+### 新增
+
+- 插件设置面板新增「3D 渲染超时时间」配置项（`plot_3d_timeout`）
+
+---
+
 ## [v1.1.1] - 2026-06-06
 
 ### 修复
