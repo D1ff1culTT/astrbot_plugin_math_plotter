@@ -165,7 +165,9 @@ class MathPlotter(Star):
     # ── 3D 渲染辅助（后台线程 + 超时保护）──
     async def _write_image_async(self, fig, filepath: str, dpi: int):
         """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
-        timeout = self._get_config("plot_3d_timeout", 30)
+        raw = self._get_config("plot_3d_timeout", 30)
+        timeout = int(raw) if raw is not None else 30
+        logger.info(f"3D 渲染超时设定: {timeout}s")
         try:
             await asyncio.wait_for(
                 asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100)),
