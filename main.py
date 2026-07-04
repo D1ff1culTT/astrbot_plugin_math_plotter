@@ -77,22 +77,12 @@ PLOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plots")
 
 @register("math_plotter", "YourName", "AI 数学公式函数图像绘制工具，辅导学习时自动调用", "1.1.1")
 class MathPlotter(Star):
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
         os.makedirs(PLOTS_DIR, exist_ok=True)
-        # 从 _conf_schema.json 加载默认配置，运行时可能被 AstrBot 覆盖
-        import json as _json
-        self._plugin_cfg = {}
-        _schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_conf_schema.json")
-        try:
-            with open(_schema_path, "r", encoding="utf-8") as _f:
-                _schema = _json.load(_f)
-            for _k, _v in _schema.items():
-                if isinstance(_v, dict) and "default" in _v:
-                    self._plugin_cfg[_k] = _v["default"]
-            logger.info(f"已加载 {len(self._plugin_cfg)} 个默认配置项")
-        except Exception as e:
-            logger.warning(f"加载 _conf_schema.json 失败: {e}")
+        # AstrBot 将插件配置（_conf_schema.json + WebUI 覆盖）作为第二参数传入
+        # AstrBotConfig 继承自 dict，直接当字典用
+        self.plugin_config = config or {}
 
     async def initialize(self):
         if _cjk_font:
@@ -107,18 +97,9 @@ class MathPlotter(Star):
     # ── helpers ──
 
     def _get_config(self, key: str, default=None):
-        """读取插件配置。优先级: AstrBot 注入 > _plugin_cfg > default"""
-        # 1) 尝试 AstrBot 全局配置（AstrBotConfig 支持 __contains__）
-        try:
-            cfg = self.context.get_config()
-            if cfg is not None and hasattr(cfg, "__contains__") and key in cfg:
-                return cfg[key]
-        except Exception:
-            pass
-        # 2) 尝试从 _conf_schema.json 加载的默认值（可被 AstrBot WebUI 覆盖）
-        if hasattr(self, "_plugin_cfg") and key in self._plugin_cfg:
-            return self._plugin_cfg[key]
-        # 3) 回退到传入的默认值
+        """读取插件配置。AstrBot 将 _conf_schema.json + WebUI 覆盖值作为 dict 传入 __init__。"""
+        if key in self.plugin_config:
+            return self.plugin_config[key]
         return default
 
     @staticmethod
@@ -199,12 +180,7 @@ class MathPlotter(Star):
     # ── 3D 渲染辅助（后台线程 + 超时保护）──
     async def _write_image_async(self, fig, filepath: str, dpi: int):
         """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
-        raw = self._get_config("plot_3d_timeout", 30)
-        timeout = int(raw) if raw is not None else 30
-        if not getattr(self, "_timeout_logged", False):
-            self._timeout_logged = True
-            logger.info(f"3D 渲染超时设定: {timeout}s (来源: _get_config('plot_3d_timeout'))")
-            logger.info(f"  _plugin_cfg={self._plugin_cfg}")
+        timeout = int(self._get_config("plot_3d_timeout", 120))
         try:
             await asyncio.wait_for(
                 asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100, engine="kaleido")),
