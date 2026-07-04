@@ -13,9 +13,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# ── Docker 无头环境：Chrome 需要 --no-sandbox 等参数才能正常渲染 3D 图像 ──
+# ── Docker 无头环境：Chrome 无 GPU 时用 SwiftShader 软件渲染 WebGL ──
 os.environ.setdefault("KALEIDO_CHROMIUM_ARGS",
-                       "--no-sandbox --disable-gpu --disable-dev-shm-usage --disable-setuid-sandbox")
+                       "--no-sandbox --disable-dev-shm-usage --disable-setuid-sandbox "
+                       "--enable-webgl --ignore-gpu-blacklist --use-gl=swiftshader")
 
 # ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
 def _detect_cjk_font() -> str | None:
