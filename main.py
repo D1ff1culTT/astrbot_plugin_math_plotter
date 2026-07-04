@@ -1064,8 +1064,6 @@ class MathPlotter(Star):
             ylabel(string): y 轴标签，留空默认 "y"
             zlabel(string): z 轴标签，留空默认 "z"
         """
-        import plotly.graph_objects as go
-
         try:
             expr_list = [e.strip() for e in expressions.split(",") if e.strip()]
             if len(expr_list) < 2:
@@ -1088,8 +1086,11 @@ class MathPlotter(Star):
             X, Y = np.meshgrid(xs, ys)
             dpi = self._get_config("plot_dpi", 120)
 
-            colorscales = ["viridis", "plasma", "inferno", "magma", "cividis"]
-            data = []
+            fig = plt.figure(figsize=(12, 9), dpi=dpi, facecolor="white")
+            ax = fig.add_subplot(111, projection="3d")
+            ax.computed_zorder = False
+
+            colors = ["#2196F3", "#F44336", "#4CAF50", "#FF9800", "#9C27B0"]
             descriptions = []
             y_sym = symbols("y")
 
@@ -1103,29 +1104,25 @@ class MathPlotter(Star):
                     Z[~np.isfinite(Z)] = np.nan
                 except Exception:
                     continue
-                cs = colorscales[i % len(colorscales)]
-                data.append(go.Surface(
-                    x=X, y=Y, z=Z,
-                    colorscale=cs,
-                    opacity=0.85 if i == 0 else 0.7,
-                    name=f"$z = {latex(expr)}$",
-                    showscale=(i == 0),
-                    colorbar=dict(title="z") if i == 0 else None,
-                ))
+                ax.plot_surface(X, Y, Z, color=colors[i % len(colors)],
+                                alpha=0.6 if i > 0 else 0.85,
+                                linewidth=0, antialiased=True,
+                                label=f"$z = {latex(expr)}$")
                 descriptions.append(f"$z = {latex(expr)}$")
 
-            if not data:
+            if not descriptions:
                 return "❌ 所有表达式均无法计算。"
 
-            fig_plotly = go.Figure(data=data)
-            fig_plotly.update_layout(
-                title=title,
-                scene=dict(xaxis_title=xlabel or "x", yaxis_title=ylabel or "y", zaxis_title=zlabel or "z"),
-                width=1200, height=900, margin=dict(l=10, r=10, t=60, b=10),
-            )
+            ax.set_xlabel(xlabel or "x", fontsize=10)
+            ax.set_ylabel(ylabel or "y", fontsize=10)
+            ax.set_zlabel(zlabel or "z", fontsize=10)
+            ax.set_title(title, fontsize=14)
+            ax.legend(fontsize=9)
+
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await self._write_image_async(fig_plotly, filepath, dpi)
+            fig.savefig(filepath, dpi=dpi, facecolor="white", bbox_inches="tight")
+            plt.close(fig)
 
             desc = "📈 已绘制 3D 曲面对比：" + ", ".join(descriptions) + f"。x/y 范围 [{x_min}, {x_max}]。"
             await self._send_result(event, desc, filepath)
@@ -1247,7 +1244,7 @@ class MathPlotter(Star):
         xlabel: str = "", ylabel: str = "", zlabel: str = "",
     ) -> MessageEventResult:
         """绘制三维参数曲线 (x(t), y(t), z(t))。用于展示空间螺线、轨迹、光线路径等。
-        变量为 t。使用 plotly 真 3D 渲染。
+        变量为 t。使用 matplotlib 3D 渲染。
 
         Args:
             x_expression(string): x(t) 表达式。例如 cos(t)、sin(2*t)
@@ -1259,8 +1256,6 @@ class MathPlotter(Star):
             ylabel(string): y 轴标签，留空默认 "y"
             zlabel(string): z 轴标签，留空默认 "z"
         """
-        import plotly.graph_objects as go
-
         try:
             t_sym = symbols("t")
             raw_x = self._preprocess_expr(x_expression)
@@ -1292,26 +1287,20 @@ class MathPlotter(Star):
                 return "❌ 参数方程在指定范围内无有效值。"
 
             dpi = self._get_config("plot_dpi", 120)
-            cmap = self._get_config("plot_3d_cmap", "plasma")
-            # 用 t 参数做颜色渐变
-            colors = t_vals[mask]
+            fig = plt.figure(figsize=(12, 9), dpi=dpi, facecolor="white")
+            ax = fig.add_subplot(111, projection="3d")
+            ax.computed_zorder = False
 
-            fig_plotly = go.Figure(data=[
-                go.Scatter3d(
-                    x=x_vals, y=y_vals, z=z_vals,
-                    mode="lines",
-                    line=dict(width=6, color=colors, colorscale=cmap,
-                              colorbar=dict(title="t")),
-                )
-            ])
-            fig_plotly.update_layout(
-                title=title if title else f"$(x,y,z) = ({latex(expr_x)},\\, {latex(expr_y)},\\, {latex(expr_z)})$",
-                scene=dict(xaxis_title=xlabel or "x", yaxis_title=ylabel or "y", zaxis_title=zlabel or "z"),
-                width=1200, height=900, margin=dict(l=10, r=10, t=60, b=10),
-            )
+            ax.plot(x_vals, y_vals, z_vals, linewidth=1.5, color="#2196F3")
+            ax.set_xlabel(xlabel or "x", fontsize=10)
+            ax.set_ylabel(ylabel or "y", fontsize=10)
+            ax.set_zlabel(zlabel or "z", fontsize=10)
+            ax.set_title(title or f"$(x,y,z) = ({latex(expr_x)},\\, {latex(expr_y)},\\, {latex(expr_z)})$", fontsize=14)
+
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await self._write_image_async(fig_plotly, filepath, dpi)
+            fig.savefig(filepath, dpi=dpi, facecolor="white", bbox_inches="tight")
+            plt.close(fig)
 
             description = (f"📈 已绘制三维参数曲线 $(x,y,z) = ({latex(expr_x)},\\, {latex(expr_y)},\\, {latex(expr_z)})$，"
                            f"t 范围 [{t_min:.2f}, {t_max:.2f}]。")
