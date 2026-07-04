@@ -145,6 +145,19 @@ class MathPlotter(Star):
             default = self._get_config("default_x_range", "-10,10")
             return self._parse_range(default)
 
+    # ── 3D 渲染辅助（后台线程 + 超时保护）──
+    async def _write_image_async(self, fig, filepath: str, dpi: int, timeout: float = 30):
+        """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100)),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"3D 渲染超时（{timeout:.0f}秒），请检查服务器是否已安装 Chrome 且资源充足"
+            ) from None
+
     # ── 公共发送逻辑 ──
     async def _send_result(self, event, description: str, filepath: str):
         """发送图文给用户。兼容 AstrBot v4.26+ ContextWrapper 和旧版 AstrMessageEvent。"""
@@ -377,7 +390,7 @@ class MathPlotter(Star):
         )
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        await asyncio.to_thread(lambda f=fig, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+        await self._write_image_async(fig, filepath, dpi)
         return filepath
 
     # ═══════════════════════════════════════════════════
@@ -621,7 +634,7 @@ class MathPlotter(Star):
 
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+        await self._write_image_async(fig_plotly, filepath, dpi)
         return filepath
 
     @filter.llm_tool(name="plot_3d_function")
@@ -911,7 +924,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+            await self._write_image_async(fig_plotly, filepath, dpi)
 
             description = (f"📈 已绘制球坐标曲面 $r = {latex(expr)}$ 的 3D 图像，"
                            f"θ 范围 [{tmin:.2f}, {tmax:.2f}]，φ 范围 [{pmin:.2f}, {pmax:.2f}]。")
@@ -1096,7 +1109,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+            await self._write_image_async(fig_plotly, filepath, dpi)
 
             desc = "📈 已绘制 3D 曲面对比：" + ", ".join(descriptions) + f"。x/y 范围 [{x_min}, {x_max}]。"
             await self._send_result(event, desc, filepath)
@@ -1194,7 +1207,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+            await self._write_image_async(fig_plotly, filepath, dpi)
 
             description = (f"📈 已绘制隐式曲面 ${latex(expr)} = 0$ 的 3D 图像，"
                            f"范围 x[{x_min},{x_max}] y[{y_min},{y_max}] z[{z_min},{z_max}]。")
@@ -1282,7 +1295,7 @@ class MathPlotter(Star):
             )
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await asyncio.to_thread(lambda f=fig_plotly, fp=filepath, s=dpi/100: f.write_image(fp, scale=s))
+            await self._write_image_async(fig_plotly, filepath, dpi)
 
             description = (f"📈 已绘制三维参数曲线 $(x,y,z) = ({latex(expr_x)},\\, {latex(expr_y)},\\, {latex(expr_z)})$，"
                            f"t 范围 [{t_min:.2f}, {t_max:.2f}]。")
