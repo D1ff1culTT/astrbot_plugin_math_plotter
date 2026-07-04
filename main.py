@@ -1,4 +1,3 @@
-import asyncio
 import os
 import re
 import uuid
@@ -12,21 +11,6 @@ from astrbot.core.message.message_event_result import MessageChain
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-# ── Docker 无头环境：强制 plotly kaleido 使用 SwiftShader 软渲染 WebGL ──
-os.environ.setdefault("KALEIDO_CHROMIUM_ARGS",
-                       "--no-sandbox --disable-dev-shm-usage --disable-setuid-sandbox "
-                       "--enable-webgl --ignore-gpu-blacklist --use-gl=angle")
-try:
-    import plotly.io as _pio
-    _pio.kaleido.scope.chromium_args = (
-        "--no-sandbox", "--disable-dev-shm-usage", "--disable-setuid-sandbox",
-        "--enable-webgl", "--ignore-gpu-blacklist", "--use-gl=angle",
-    )
-    _pio.kaleido.scope.default_width = 1200
-    _pio.kaleido.scope.default_height = 900
-except Exception:
-    pass
 
 # ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
 def _detect_cjk_font() -> str | None:
@@ -176,21 +160,6 @@ class MathPlotter(Star):
         except Exception:
             default = self._get_config("default_x_range", "-10,10")
             return self._parse_range(default)
-
-    # ── 3D 渲染辅助（后台线程 + 超时保护）──
-    async def _write_image_async(self, fig, filepath: str, dpi: int):
-        """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
-        timeout = int(self._get_config("plot_3d_timeout", 120))
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100, engine="kaleido")),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
-            raise RuntimeError(
-                f"3D 渲染超时（{timeout}秒），请检查服务器是否已安装 Chrome 且资源充足，"
-                f"或可在插件设置面板中调大「3D 渲染超时时间」"
-            ) from None
 
     # ── 公共发送逻辑 ──
     async def _send_result(self, event, description: str, filepath: str):
@@ -370,7 +339,7 @@ class MathPlotter(Star):
                 zorder=5,
             )
 
-    async def _render_3d_vectors(self, vector_list: list, title: str, dpi: int,
+    def _render_3d_vectors(self, vector_list: list, title: str, dpi: int,
                                    xlabel: str = "x", ylabel: str = "y", zlabel: str = "z") -> str:
         """用 plotly 渲染三维向量图。每个向量用线段 + 末端锥体箭头表示。
 
@@ -381,50 +350,42 @@ class MathPlotter(Star):
             xlabel, ylabel, zlabel: 轴标签
         Returns: 文件路径
         """
-        import plotly.graph_objects as go
+        fig = plt.figure(figsize=(12, 9), dpi=dpi, facecolor="white")
+        ax = fig.add_subplot(111, projection="3d")
+        ax.computed_zorder = False
 
-        traces = []
+        all_pts = []
         for v in vector_list:
             sx, sy, sz = v["start"]
             ex, ey, ez = v["end"]
             dx, dy, dz = ex - sx, ey - sy, ez - sz
-            name = v.get("label", "")
+            all_pts.extend([sx, ex, sy, ey, sz, ez])
+            # quiver 画箭头（从起点指向终点）
+            ax.quiver(sx, sy, sz, dx, dy, dz, color=v["color"],
+                      arrow_length_ratio=0.15, linewidth=2,
+                      label=v.get("label") or None)
+            # 终点标记球
+            ax.scatter([ex], [ey], [ez], color=v["color"], s=20, alpha=0.8)
 
-            # 线段
-            traces.append(go.Scatter3d(
-                x=[sx, ex], y=[sy, ey], z=[sz, ez],
-                mode="lines",
-                line=dict(color=v["color"], width=5),
-                name=name,
-                showlegend=bool(name),
-            ))
-            # 末端锥体箭头
-            mag = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
-            if mag > 1e-8:
-                traces.append(go.Cone(
-                    x=[ex], y=[ey], z=[ez],
-                    u=[dx / mag], v=[dy / mag], w=[dz / mag],
-                    sizemode="absolute", sizeref=0.35,
-                    showscale=False,
-                    colorscale=[[0, v["color"]], [1, v["color"]]],
-                    anchor="tip",
-                    name="",
-                    showlegend=False,
-                ))
+        # 自动确定坐标轴范围
+        if all_pts:
+            xs, ys, zs = all_pts[::3], all_pts[1::3], all_pts[2::3]
+            rng = max(max(xs)-min(xs), max(ys)-min(ys), max(zs)-min(zs), 4) * 0.2 + 1
+            ax.set_xlim(min(xs)-rng, max(xs)+rng)
+            ax.set_ylim(min(ys)-rng, max(ys)+rng)
+            ax.set_zlim(min(zs)-rng, max(zs)+rng)
 
-        fig = go.Figure(data=traces)
-        fig.update_layout(
-            title=title,
-            scene=dict(
-                xaxis_title=xlabel, yaxis_title=ylabel, zaxis_title=zlabel,
-                aspectmode="data",
-            ),
-            width=1200, height=900,
-            margin=dict(l=10, r=10, t=60, b=10),
-        )
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        ax.set_zlabel(zlabel, fontsize=10)
+        ax.set_title(title, fontsize=14)
+        if any(v.get("label") for v in vector_list):
+            ax.legend(fontsize=9)
+
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        await self._write_image_async(fig, filepath, dpi)
+        fig.savefig(filepath, dpi=dpi, facecolor="white", bbox_inches="tight")
+        plt.close(fig)
         return filepath
 
     # ═══════════════════════════════════════════════════
@@ -1151,8 +1112,6 @@ class MathPlotter(Star):
             ylabel(string): y 轴标签，留空默认 "y"
             zlabel(string): z 轴标签，留空默认 "z"
         """
-        import plotly.graph_objects as go
-
         try:
             y_sym = symbols("y")
             z_sym = symbols("z")
@@ -1181,39 +1140,38 @@ class MathPlotter(Star):
             else:
                 z_min, z_max = x_min, x_max
 
-            n = self._get_config("plot_3d_grid_density", 80)
-            xs = np.linspace(x_min, x_max, n)
-            ys = np.linspace(y_min, y_max, n)
-            zs = np.linspace(z_min, z_max, n)
-            Xv, Yv, Zv = np.meshgrid(xs, ys, zs, indexing="ij")
+            n_xy = self._get_config("plot_3d_grid_density", 120)
+            n_z = 60
+            xs = np.linspace(x_min, x_max, n_xy)
+            ys = np.linspace(y_min, y_max, n_xy)
+            zs = np.linspace(z_min, z_max, n_z)
+            X2d, Y2d = np.meshgrid(xs, ys)
 
-            try:
-                V = f(Xv, Yv, Zv)
-                V = np.array(V, dtype=float)
-                V[~np.isfinite(V)] = 0
-            except Exception:
-                return f"❌ 无法计算表达式「{equation}」的值，请检查定义域。"
-
-            cmap = self._get_config("plot_3d_cmap", "viridis")
             dpi = self._get_config("plot_dpi", 120)
-            fig_plotly = go.Figure(data=[
-                go.Isosurface(
-                    x=Xv.ravel(), y=Yv.ravel(), z=Zv.ravel(),
-                    value=V.ravel(),
-                    isomin=0, isomax=0,
-                    surface_count=1,
-                    colorscale=cmap,
-                    caps=dict(x_show=False, y_show=False, z_show=False),
-                )
-            ])
-            fig_plotly.update_layout(
-                title=title if title else f"${latex(expr)} = 0$",
-                scene=dict(xaxis_title=xlabel or "x", yaxis_title=ylabel or "y", zaxis_title=zlabel or "z"),
-                width=1200, height=900, margin=dict(l=10, r=10, t=60, b=10),
-            )
+            fig = plt.figure(figsize=(12, 9), dpi=dpi, facecolor="white")
+            ax = fig.add_subplot(111, projection="3d")
+            ax.computed_zorder = False
+
+            # 在每个 z 切片上绘制 F(x,y,z)=0 的等高线
+            for z_val in zs:
+                try:
+                    Zslice = np.full_like(X2d, z_val)
+                    V_slice = f(X2d, Y2d, Zslice)
+                    V_slice = np.array(V_slice, dtype=float)
+                    ax.contour(X2d, Y2d, V_slice, levels=[0], colors="#2196F3",
+                               linewidths=0.6, alpha=0.5, zdir="z", offset=z_val)
+                except Exception:
+                    continue
+
+            ax.set_xlabel(xlabel or "x", fontsize=10)
+            ax.set_ylabel(ylabel or "y", fontsize=10)
+            ax.set_zlabel(zlabel or "z", fontsize=10)
+            ax.set_title(title or f"${latex(expr)} = 0$", fontsize=14)
+
             filename = f"plot_{uuid.uuid4().hex[:8]}.png"
             filepath = os.path.join(PLOTS_DIR, filename)
-            await self._write_image_async(fig_plotly, filepath, dpi)
+            fig.savefig(filepath, dpi=dpi, facecolor="white", bbox_inches="tight")
+            plt.close(fig)
 
             description = (f"📈 已绘制隐式曲面 ${latex(expr)} = 0$ 的 3D 图像，"
                            f"范围 x[{x_min},{x_max}] y[{y_min},{y_max}] z[{z_min},{z_max}]。")
@@ -1399,7 +1357,7 @@ class MathPlotter(Star):
             dpi = self._get_config("plot_dpi", 120)
             plot_title = title or "三维向量图"
 
-            filepath = await self._render_3d_vectors(
+            filepath = self._render_3d_vectors(
                 parsed, plot_title, dpi,
                 xlabel=xlabel or "x", ylabel=ylabel or "y", zlabel=zlabel or "z",
             )
