@@ -182,6 +182,7 @@ AI 可自动调用以下工具（通过 `@filter.llm_tool` 注册）：
 | `plot_3d_alpha` | 0.88 | 3D 曲面透明度 |
 | `plot_3d_elev` | 25 | 3D 仰角（度） |
 | `plot_3d_azim` | -60 | 3D 方位角（度） |
+| `plot_3d_timeout` | 30 | 3D 渲染超时时间（秒） |
 
 ## 依赖
 

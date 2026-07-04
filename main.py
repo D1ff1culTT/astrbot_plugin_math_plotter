@@ -146,8 +146,9 @@ class MathPlotter(Star):
             return self._parse_range(default)
 
     # ── 3D 渲染辅助（后台线程 + 超时保护）──
-    async def _write_image_async(self, fig, filepath: str, dpi: int, timeout: float = 30):
+    async def _write_image_async(self, fig, filepath: str, dpi: int):
         """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
+        timeout = self._get_config("plot_3d_timeout", 30)
         try:
             await asyncio.wait_for(
                 asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100)),
@@ -155,7 +156,8 @@ class MathPlotter(Star):
             )
         except asyncio.TimeoutError:
             raise RuntimeError(
-                f"3D 渲染超时（{timeout:.0f}秒），请检查服务器是否已安装 Chrome 且资源充足"
+                f"3D 渲染超时（{timeout}秒），请检查服务器是否已安装 Chrome 且资源充足，"
+                f"或可在插件设置面板中调大「3D 渲染超时时间」"
             ) from None
 
     # ── 公共发送逻辑 ──

@@ -58,5 +58,11 @@
     "type": "int",
     "default": -60,
     "hint": "3D 曲面图的相机方位角，0 为正东方向，-90 为正南方向。"
+  },
+  "plot_3d_timeout": {
+    "description": "3D 渲染超时时间（秒）",
+    "type": "int",
+    "default": 30,
+    "hint": "plotly 3D 图像导出（kaleido/Chrome）的最大等待时间。服务器性能较低或 Chrome 启动较慢时可适当调大，如 60-90。"
   }
 }
