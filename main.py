@@ -890,8 +890,6 @@ class MathPlotter(Star):
             ylabel(string): y 轴标签，留空默认 "y"
             zlabel(string): z 轴标签，留空默认 "z"
         """
-        import plotly.graph_objects as go
-
         try:
             theta_sym = symbols("theta")
             phi_sym = symbols("phi")
@@ -926,21 +924,16 @@ class MathPlotter(Star):
             Y = R * np.sin(T) * np.sin(P)
             Z = R * np.cos(T)
 
-            cmap = self._get_config("plot_3d_cmap", "viridis")
             dpi = self._get_config("plot_dpi", 120)
-            fig_plotly = go.Figure(data=[
-                go.Surface(x=X, y=Y, z=Z, surfacecolor=R,
-                           colorscale=cmap, showscale=True,
-                           colorbar=dict(title="r"))
-            ])
-            fig_plotly.update_layout(
-                title=title if title else f"$r = {latex(expr)}$",
-                scene=dict(xaxis_title=xlabel or "x", yaxis_title=ylabel or "y", zaxis_title=zlabel or "z"),
-                width=1200, height=900, margin=dict(l=10, r=10, t=60, b=10),
+            cmap = self._get_config("plot_3d_cmap", "viridis")
+            filepath = self._render_3d_surface(
+                X, Y, Z, cmap_name=cmap,
+                elev=self._get_config("plot_3d_elev", 25),
+                azim=self._get_config("plot_3d_azim", -60),
+                dpi=dpi,
+                title=title or f"$r = {latex(expr)}$",
+                xlabel=xlabel or "x", ylabel=ylabel or "y", zlabel=zlabel or "z",
             )
-            filename = f"plot_{uuid.uuid4().hex[:8]}.png"
-            filepath = os.path.join(PLOTS_DIR, filename)
-            await self._write_image_async(fig_plotly, filepath, dpi)
 
             description = (f"📈 已绘制球坐标曲面 $r = {latex(expr)}$ 的 3D 图像，"
                            f"θ 范围 [{tmin:.2f}, {tmax:.2f}]，φ 范围 [{pmin:.2f}, {pmax:.2f}]。")
