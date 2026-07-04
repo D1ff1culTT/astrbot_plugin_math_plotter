@@ -12,11 +12,27 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# ── 中文字体 ──
-plt.rcParams["font.sans-serif"] = [
-    "SimHei", "Microsoft YaHei", "Noto Sans CJK SC",
-    "WenQuanYi Micro Hei", "DejaVu Sans",
-]
+# ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
+def _detect_cjk_font() -> str | None:
+    """检测系统上第一个可用的 CJK 字体名称。"""
+    from matplotlib import font_manager as _fm
+    available = {f.name for f in _fm.fontManager.ttflist}
+    candidates = [
+        "Noto Sans CJK SC", "Noto Sans SC", "WenQuanYi Micro Hei",
+        "WenQuanYi Zen Hei", "Source Han Sans SC", "AR PL UMing CN",
+        "AR PL UKai CN", "Droid Sans Fallback", "SimHei",
+        "Microsoft YaHei",
+    ]
+    for name in candidates:
+        if name in available:
+            return name
+    return None
+
+_cjk_font = _detect_cjk_font()
+if _cjk_font:
+    plt.rcParams["font.sans-serif"] = [_cjk_font, "DejaVu Sans"]
+else:
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
 import numpy as np
@@ -33,7 +49,11 @@ class MathPlotter(Star):
         os.makedirs(PLOTS_DIR, exist_ok=True)
 
     async def initialize(self):
-        logger.info("数学绘图插件已就绪，plots 目录: %s", PLOTS_DIR)
+        if _cjk_font:
+            logger.info("数学绘图插件已就绪，中文字体: %s，plots 目录: %s", _cjk_font, PLOTS_DIR)
+        else:
+            logger.warning("数学绘图插件已就绪，未检测到 CJK 中文字体！图中的中文可能显示为方框。"
+                           "请在服务器上安装中文字体（如 apt install fonts-noto-cjk）。")
 
     async def terminate(self):
         pass
