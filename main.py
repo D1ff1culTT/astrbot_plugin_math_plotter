@@ -80,24 +80,43 @@ class MathPlotter(Star):
 
     def _get_config(self, key: str, default=None):
         try:
-            # 诊断：一次性输出全部 config 内容，定位配置读取问题
+            # 诊断：一次性扫描所有可能的配置位置
             if not getattr(self, "_cfg_dumped", False):
                 self._cfg_dumped = True
-                cfg = getattr(self.context, "config", None)
-                logger.info(f"_get_config 诊断: context.config type={type(cfg).__name__}")
-                if isinstance(cfg, dict):
-                    logger.info(f"_get_config 诊断: config keys={list(cfg.keys())}")
-                    for k, v in cfg.items():
-                        logger.info(f"  {k} = {v!r} (type={type(v).__name__})")
-                # 也尝试其他可能的配置路径
-                for alt in ("plugin_config", "cfg", "settings", "options"):
-                    alt_cfg = getattr(self.context, alt, None)
-                    if alt_cfg is not None:
-                        logger.info(f"_get_config 诊断: context.{alt} type={type(alt_cfg).__name__}")
+                # 候选路径列表
+                candidates = [
+                    ("self.config", lambda: self.config),
+                    ("self.context.config", lambda: getattr(self.context, "config", None)),
+                    ("self.context.get_config()", lambda: getattr(self.context, "get_config", lambda: None)()),
+                    ("self._config", lambda: getattr(self, "_config", None)),
+                    ("self.plugin_config", lambda: getattr(self, "plugin_config", None)),
+                    ("context.plugin_config", lambda: getattr(self.context, "plugin_config", None)),
+                ]
+                for label, getter in candidates:
+                    try:
+                        val = getter()
+                        if val is not None:
+                            logger.info(f"_get_config 命中: {label} type={type(val).__name__}")
+                            if isinstance(val, dict):
+                                logger.info(f"  keys: {list(val.keys())[:30]}")
+                                logger.info(f"  plot_3d_timeout = {val.get('plot_3d_timeout', 'KEY_NOT_FOUND')}")
+                    except Exception as e:
+                        logger.info(f"_get_config 候选 {label}: {type(e).__name__}: {e}")
 
-            cfg = getattr(self.context, "config", None)
-            if isinstance(cfg, dict) and key in cfg:
-                return cfg[key]
+            # 尝试 self.config（Star 基类属性）
+            try:
+                cfg = self.config
+                if isinstance(cfg, dict) and key in cfg:
+                    return cfg[key]
+            except Exception:
+                pass
+            # 尝试 self.context.config（兼容旧版）
+            try:
+                cfg = getattr(self.context, "config", None)
+                if isinstance(cfg, dict) and key in cfg:
+                    return cfg[key]
+            except Exception:
+                pass
         except Exception:
             pass
         return default
