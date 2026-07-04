@@ -13,6 +13,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# ── Docker 无头环境：Chrome 需要 --no-sandbox 等参数才能正常渲染 3D 图像 ──
+os.environ.setdefault("KALEIDO_CHROMIUM_ARGS",
+                       "--no-sandbox --disable-gpu --disable-dev-shm-usage --disable-setuid-sandbox")
+
 # ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
 def _detect_cjk_font() -> str | None:
     """检测系统上第一个可用的 CJK 字体名称。Docker 中会强制重建 matplotlib 字体缓存。"""
@@ -65,6 +69,19 @@ class MathPlotter(Star):
     def __init__(self, context: Context):
         super().__init__(context)
         os.makedirs(PLOTS_DIR, exist_ok=True)
+        # 从 _conf_schema.json 加载默认配置，运行时可能被 AstrBot 覆盖
+        import json as _json
+        self._plugin_cfg = {}
+        _schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_conf_schema.json")
+        try:
+            with open(_schema_path, "r", encoding="utf-8") as _f:
+                _schema = _json.load(_f)
+            for _k, _v in _schema.items():
+                if isinstance(_v, dict) and "default" in _v:
+                    self._plugin_cfg[_k] = _v["default"]
+            logger.info(f"已加载 {len(self._plugin_cfg)} 个默认配置项")
+        except Exception as e:
+            logger.warning(f"加载 _conf_schema.json 失败: {e}")
 
     async def initialize(self):
         if _cjk_font:
@@ -79,65 +96,18 @@ class MathPlotter(Star):
     # ── helpers ──
 
     def _get_config(self, key: str, default=None):
+        """读取插件配置。优先级: AstrBot 注入 > _plugin_cfg > default"""
+        # 1) 尝试 AstrBot 全局配置（AstrBotConfig 支持 __contains__）
         try:
-            # 诊断：一次性扫描所有可能的配置位置
-            if not getattr(self, "_cfg_dumped", False):
-                self._cfg_dumped = True
-                # 候选路径列表
-                candidates = [
-                    ("self.config", lambda: self.config),
-                    ("self.context.config", lambda: getattr(self.context, "config", None)),
-                    ("self.context.get_config()", lambda: getattr(self.context, "get_config", lambda: None)()),
-                    ("self._config", lambda: getattr(self, "_config", None)),
-                    ("self.plugin_config", lambda: getattr(self, "plugin_config", None)),
-                    ("context.plugin_config", lambda: getattr(self.context, "plugin_config", None)),
-                ]
-                for label, getter in candidates:
-                    try:
-                        val = getter()
-                        if val is not None:
-                            logger.info(f"_get_config 命中: {label} type={type(val).__name__}")
-                            if isinstance(val, dict):
-                                logger.info(f"  keys: {list(val.keys())[:30]}")
-                                logger.info(f"  plot_3d_timeout = {val.get('plot_3d_timeout', 'KEY_NOT_FOUND')}")
-                    except Exception as e:
-                        logger.info(f"_get_config 候选 {label}: {type(e).__name__}: {e}")
-
-            # 扫描 self、self.context 上所有可能承载配置的属性
-            if not getattr(self, "_cfg_found", False):
-                self._cfg_found = True
-                for obj, label in [(self, "self"), (self.context, "context")]:
-                    for attr in dir(obj):
-                        try:
-                            v = getattr(obj, attr)
-                            if v is not None and not attr.startswith("__"):
-                                t = type(v).__name__
-                                if isinstance(v, dict):
-                                    keys = list(v.keys())[:20]
-                                    logger.info(f"_get_config 扫描: {label}.{attr} = dict, keys={keys}")
-                                    if "plot_3d_timeout" in v:
-                                        logger.info(f"  >> FOUND plot_3d_timeout = {v['plot_3d_timeout']}")
-                                elif hasattr(v, "__contains__") and not isinstance(v, (str, list, tuple, set)):
-                                    logger.info(f"_get_config 扫描: {label}.{attr} = {t} (mapping-like)")
-                        except Exception:
-                            pass
-
-            # 尝试 self.config（Star 基类属性）
-            try:
-                cfg = self.config
-                if isinstance(cfg, dict) and key in cfg:
-                    return cfg[key]
-            except Exception:
-                pass
-            # 尝试 self.context.config（兼容旧版）
-            try:
-                cfg = getattr(self.context, "config", None)
-                if isinstance(cfg, dict) and key in cfg:
-                    return cfg[key]
-            except Exception:
-                pass
+            cfg = self.context.get_config()
+            if cfg is not None and hasattr(cfg, "__contains__") and key in cfg:
+                return cfg[key]
         except Exception:
             pass
+        # 2) 尝试从 _conf_schema.json 加载的默认值（可被 AstrBot WebUI 覆盖）
+        if hasattr(self, "_plugin_cfg") and key in self._plugin_cfg:
+            return self._plugin_cfg[key]
+        # 3) 回退到传入的默认值
         return default
 
     @staticmethod
@@ -220,10 +190,13 @@ class MathPlotter(Star):
         """在后台线程中执行 plotly write_image，避免阻塞事件循环。带超时保护。"""
         raw = self._get_config("plot_3d_timeout", 30)
         timeout = int(raw) if raw is not None else 30
-        logger.info(f"3D 渲染超时设定: {timeout}s")
+        if not getattr(self, "_timeout_logged", False):
+            self._timeout_logged = True
+            logger.info(f"3D 渲染超时设定: {timeout}s (来源: _get_config('plot_3d_timeout'))")
+            logger.info(f"  _plugin_cfg={self._plugin_cfg}")
         try:
             await asyncio.wait_for(
-                asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100)),
+                asyncio.to_thread(lambda: fig.write_image(filepath, scale=dpi / 100, engine="kaleido")),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
