@@ -80,6 +80,21 @@ class MathPlotter(Star):
 
     def _get_config(self, key: str, default=None):
         try:
+            # 诊断：一次性输出全部 config 内容，定位配置读取问题
+            if not getattr(self, "_cfg_dumped", False):
+                self._cfg_dumped = True
+                cfg = getattr(self.context, "config", None)
+                logger.info(f"_get_config 诊断: context.config type={type(cfg).__name__}")
+                if isinstance(cfg, dict):
+                    logger.info(f"_get_config 诊断: config keys={list(cfg.keys())}")
+                    for k, v in cfg.items():
+                        logger.info(f"  {k} = {v!r} (type={type(v).__name__})")
+                # 也尝试其他可能的配置路径
+                for alt in ("plugin_config", "cfg", "settings", "options"):
+                    alt_cfg = getattr(self.context, alt, None)
+                    if alt_cfg is not None:
+                        logger.info(f"_get_config 诊断: context.{alt} type={type(alt_cfg).__name__}")
+
             cfg = getattr(self.context, "config", None)
             if isinstance(cfg, dict) and key in cfg:
                 return cfg[key]
