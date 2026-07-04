@@ -15,14 +15,31 @@ import matplotlib.pyplot as plt
 
 # ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
 def _detect_cjk_font() -> str | None:
-    """检测系统上第一个可用的 CJK 字体名称。"""
+    """检测系统上第一个可用的 CJK 字体名称。Docker 中会强制重建 matplotlib 字体缓存。"""
+    import glob as _glob
     from matplotlib import font_manager as _fm
+
+    # 删除 matplotlib 字体缓存，强制重新扫描（Docker 构建时字体可能后装）
+    _cache_dir = os.path.join(
+        os.path.expanduser("~"), ".cache", "matplotlib"
+    )
+    for _pat in ("fontlist-v*.json", "fontlist.json"):
+        for _f in _glob.glob(os.path.join(_cache_dir, _pat)):
+            try:
+                os.remove(_f)
+            except OSError:
+                pass
+
+    # 强制重新扫描系统字体
+    _fm.fontManager = _fm.FontManager()
+    _fm._load_fontmanager(try_read_cache=False)
+
     available = {f.name for f in _fm.fontManager.ttflist}
     candidates = [
-        "Noto Sans CJK SC", "Noto Sans SC", "WenQuanYi Micro Hei",
-        "WenQuanYi Zen Hei", "Source Han Sans SC", "AR PL UMing CN",
-        "AR PL UKai CN", "Droid Sans Fallback", "SimHei",
-        "Microsoft YaHei",
+        "Noto Sans CJK SC", "Noto Sans SC", "Noto Sans CJK TC",
+        "Noto Serif CJK SC", "WenQuanYi Micro Hei", "WenQuanYi Zen Hei",
+        "Source Han Sans SC", "AR PL UMing CN", "AR PL UKai CN",
+        "Droid Sans Fallback", "SimHei", "Microsoft YaHei",
     ]
     for name in candidates:
         if name in available:
