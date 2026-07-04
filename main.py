@@ -13,10 +13,20 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# ── Docker 无头环境：Chrome 无 GPU 时用 SwiftShader 软件渲染 WebGL ──
+# ── Docker 无头环境：强制 plotly kaleido 使用 SwiftShader 软渲染 WebGL ──
 os.environ.setdefault("KALEIDO_CHROMIUM_ARGS",
                        "--no-sandbox --disable-dev-shm-usage --disable-setuid-sandbox "
-                       "--enable-webgl --ignore-gpu-blacklist --use-gl=swiftshader")
+                       "--enable-webgl --ignore-gpu-blacklist --use-gl=angle")
+try:
+    import plotly.io as _pio
+    _pio.kaleido.scope.chromium_args = (
+        "--no-sandbox", "--disable-dev-shm-usage", "--disable-setuid-sandbox",
+        "--enable-webgl", "--ignore-gpu-blacklist", "--use-gl=angle",
+    )
+    _pio.kaleido.scope.default_width = 1200
+    _pio.kaleido.scope.default_height = 900
+except Exception:
+    pass
 
 # ── 中文字体：运行时检测系统可用的 CJK 字体，避免硬编码不存在字体导致"方框字" ──
 def _detect_cjk_font() -> str | None:
