@@ -433,7 +433,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误：「{expression}」无法识别。详情: {e}"
         except Exception as e:
-            logger.error(f"绘图失败: {e}")
+            logger.exception(f"绘图失败: {e}")
             return f"❌ 绘制「{expression}」时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -495,7 +495,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"多函数绘图失败: {e}")
+            logger.exception(f"多函数绘图失败: {e}")
             return f"❌ 绘图时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -564,7 +564,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 方程表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"隐式方程绘图失败: {e}")
+            logger.exception(f"隐式方程绘图失败: {e}")
             return f"❌ 绘制隐式方程时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -698,7 +698,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误：「{expression}」无法识别。详情: {e}"
         except Exception as e:
-            logger.error(f"3D 绘图失败: {e}")
+            logger.exception(f"3D 绘图失败: {e}")
             return f"❌ 绘制三维函数「{expression}」时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -764,7 +764,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误：「{expression}」无法识别。详情: {e}"
         except Exception as e:
-            logger.error(f"极坐标绘图失败: {e}")
+            logger.exception(f"极坐标绘图失败: {e}")
             return f"❌ 绘制极坐标「{expression}」时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -834,7 +834,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"参数方程绘图失败: {e}")
+            logger.exception(f"参数方程绘图失败: {e}")
             return f"❌ 绘制参数方程时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -920,7 +920,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误：「{expression}」无法识别。详情: {e}"
         except Exception as e:
-            logger.error(f"球坐标绘图失败: {e}")
+            logger.exception(f"球坐标绘图失败: {e}")
             return f"❌ 绘制球坐标曲面时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1009,7 +1009,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"矢量场绘图失败: {e}")
+            logger.exception(f"矢量场绘图失败: {e}")
             return f"❌ 绘制矢量场时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1104,7 +1104,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"3D 多曲面绘图失败: {e}")
+            logger.exception(f"3D 多曲面绘图失败: {e}")
             return f"❌ 绘制 3D 多曲面时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1203,7 +1203,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误：「{equation}」无法识别。详情: {e}"
         except Exception as e:
-            logger.error(f"隐式 3D 绘图失败: {e}")
+            logger.exception(f"隐式 3D 绘图失败: {e}")
             return f"❌ 绘制隐式 3D 曲面时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1291,7 +1291,7 @@ class MathPlotter(Star):
         except SympifyError as e:
             return f"❌ 表达式解析错误。详情: {e}"
         except Exception as e:
-            logger.error(f"3D 参数曲线绘图失败: {e}")
+            logger.exception(f"3D 参数曲线绘图失败: {e}")
             return f"❌ 绘制 3D 参数曲线时出错: {e}"
 
 
@@ -1350,7 +1350,7 @@ class MathPlotter(Star):
         except ValueError as e:
             return f"❌ 向量格式错误: {e}"
         except Exception as e:
-            logger.error(f"二维向量绘图失败: {e}")
+            logger.exception(f"二维向量绘图失败: {e}")
             return f"❌ 绘制二维向量图时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1398,7 +1398,7 @@ class MathPlotter(Star):
         except ValueError as e:
             return f"❌ 向量格式错误: {e}"
         except Exception as e:
-            logger.error(f"三维向量绘图失败: {e}")
+            logger.exception(f"三维向量绘图失败: {e}")
             return f"❌ 绘制三维向量图时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1468,7 +1468,7 @@ class MathPlotter(Star):
         except ValueError as e:
             return f"❌ 向量格式错误: {e}"
         except Exception as e:
-            logger.error(f"向量加法绘图失败: {e}")
+            logger.exception(f"向量加法绘图失败: {e}")
             return f"❌ 绘制向量加法时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1528,7 +1528,7 @@ class MathPlotter(Star):
         except ValueError as e:
             return f"❌ 向量格式错误: {e}"
         except Exception as e:
-            logger.error(f"向量数乘绘图失败: {e}")
+            logger.exception(f"向量数乘绘图失败: {e}")
             return f"❌ 绘制向量数乘时出错: {e}"
 
     # ═══════════════════════════════════════════════════
@@ -1597,7 +1597,7 @@ class MathPlotter(Star):
         except ValueError as e:
             return f"❌ 基向量格式错误: {e}"
         except Exception as e:
-            logger.error(f"基变换绘图失败: {e}")
+            logger.exception(f"基变换绘图失败: {e}")
             return f"❌ 绘制基变换时出错: {e}"
 
     # ═══════════════════════════════════════════════════
