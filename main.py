@@ -618,7 +618,7 @@ class MathPlotter(Star):
     #  手动 3D 投影渲染（无需 Axes3D，避免 BboxTransformTo 错误）
     # ═══════════════════════════════════════════════════
 
-    async def _render_3d_surface(
+    def _render_3d_surface(
         self, X: np.ndarray, Y: np.ndarray, Z: np.ndarray,
         cmap_name: str = "viridis",
         elev: float = 25, azim: float = -60,
@@ -626,49 +626,31 @@ class MathPlotter(Star):
         title: str = "",
         xlabel: str = "x", ylabel: str = "y", zlabel: str = "z",
     ) -> str:
-        """用 plotly 渲染真正的 3D 曲面，完全绕过 matplotlib Axes3D。"""
-        import plotly.graph_objects as go
-        import math
+        """用 matplotlib 原生 3D 渲染曲面，无需 Chrome/WebGL，Docker 可用。"""
+        fig = plt.figure(figsize=(12, 9), dpi=dpi, facecolor="white")
+        ax = fig.add_subplot(111, projection="3d")
+        ax.computed_zorder = False
 
-        # plotly camera: 将 matplotlib 的 (elev, azim) 转换为 (x, y, z) 眼坐标
-        el = math.radians(elev)
-        az = math.radians(azim)
-        r = 2.0  # 距离
-        eye = dict(
-            x=r * math.cos(el) * math.cos(az),
-            y=r * math.cos(el) * math.sin(az),
-            z=r * math.sin(el),
+        # 渲染曲面
+        surf = ax.plot_surface(
+            X, Y, Z, cmap=cmap_name, alpha=0.85,
+            linewidth=0, antialiased=True,
         )
+        # 底面投影等高线
+        ax.contour(X, Y, Z, zdir="z", offset=Z.min(), levels=10,
+                   colors="gray", linewidths=0.3, alpha=0.4)
+        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=12, label=zlabel)
 
-        fig_plotly = go.Figure(data=[
-            go.Surface(
-                x=X, y=Y, z=Z,
-                colorscale=cmap_name,
-                showscale=True,
-                colorbar=dict(title=zlabel),
-                contours={
-                    "z": {"show": True, "usecolormap": True,
-                          "highlightcolor": "limegreen", "project": {"z": True}}
-                },
-            )
-        ])
-
-        fig_plotly.update_layout(
-            title=title,
-            scene=dict(
-                xaxis_title=xlabel,
-                yaxis_title=ylabel,
-                zaxis_title=zlabel,
-                camera=dict(eye=eye),
-            ),
-            width=1200,
-            height=900,
-            margin=dict(l=10, r=10, t=60, b=10),
-        )
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        ax.set_zlabel(zlabel, fontsize=10)
+        ax.set_title(title, fontsize=14)
+        ax.view_init(elev=elev, azim=azim)
 
         filename = f"plot_{uuid.uuid4().hex[:8]}.png"
         filepath = os.path.join(PLOTS_DIR, filename)
-        await self._write_image_async(fig_plotly, filepath, dpi)
+        fig.savefig(filepath, dpi=dpi, facecolor="white", bbox_inches="tight")
+        plt.close(fig)
         return filepath
 
     @filter.llm_tool(name="plot_3d_function")
@@ -726,7 +708,7 @@ class MathPlotter(Star):
 
             # ── Plotly 真 3D 渲染 ──
             plot_title = title if title else f"$z = {latex_expr}$"
-            filepath = await self._render_3d_surface(
+            filepath = self._render_3d_surface(
                 X, Y, Z,
                 cmap_name=cmap,
                 elev=self._get_config("plot_3d_elev", 25),
