@@ -103,6 +103,25 @@ class MathPlotter(Star):
                     except Exception as e:
                         logger.info(f"_get_config 候选 {label}: {type(e).__name__}: {e}")
 
+            # 扫描 self、self.context 上所有可能承载配置的属性
+            if not getattr(self, "_cfg_found", False):
+                self._cfg_found = True
+                for obj, label in [(self, "self"), (self.context, "context")]:
+                    for attr in dir(obj):
+                        try:
+                            v = getattr(obj, attr)
+                            if v is not None and not attr.startswith("__"):
+                                t = type(v).__name__
+                                if isinstance(v, dict):
+                                    keys = list(v.keys())[:20]
+                                    logger.info(f"_get_config 扫描: {label}.{attr} = dict, keys={keys}")
+                                    if "plot_3d_timeout" in v:
+                                        logger.info(f"  >> FOUND plot_3d_timeout = {v['plot_3d_timeout']}")
+                                elif hasattr(v, "__contains__") and not isinstance(v, (str, list, tuple, set)):
+                                    logger.info(f"_get_config 扫描: {label}.{attr} = {t} (mapping-like)")
+                        except Exception:
+                            pass
+
             # 尝试 self.config（Star 基类属性）
             try:
                 cfg = self.config
